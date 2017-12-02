@@ -1,0 +1,81 @@
+{% extends "bets/base.html" %}
+{% load bet_tags %}
+
+{% block content %}
+
+<script>
+$( document ).ready(function() {
+
+    $('.btn-toggle').click(function() {
+        $(this).find('span').toggleClass('hidden');
+    });
+
+});
+</script>
+
+{% for group in game_grid %}
+
+<div class="row">
+
+    <div class="col-md-6 col-centered">
+        <h3 class="text-center text-warning">{{group.name}}
+            <button class="btn btn-link btn-toggle" data-toggle="collapse" data-target=".gameinfo-{{forloop.counter}}">
+                <span>Toon wedstrijden &raquo</span><span class="hidden">&laquo Verberg wedstrijden</span>
+            </button>
+        </h3>
+    </div>
+
+</div>
+
+<div class="row gameinfo-{{forloop.counter}} collapse">
+
+    {% if group.offset %}
+    <div class="col-md-{{group.offset}}"></div>
+    {% endif%}
+
+    {% for game in group.games %}
+
+    <!--one game block-->
+    {% if game != None %}
+    <div class="col-md-3 col-sm-4 {% if group.centered%}col-centered{% endif %}">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <a href="{% url 'bets:game' game.game_id %}" class="nohyperlinkmarkup">
+                    <h4 class="panel-title">{{game.gametype}}<span class="pull-right">match {{game.game_id}}</span></h4>
+                </a>
+            </div>
+            <div class="list-group">
+                <li class="list-group-item clearfix">
+                    <a href="{% url 'bets:game' game.game_id %}" class="nohyperlinkmarkup">
+                        {% if game.winner == 1 %}
+                        <b>{{game.team1}}</b> - {{game.team2}}<span class="pull-right">{{game.result}}</span>
+                        {% elif game.winner == 2 %}
+                        {{game.team1}} - <b>{{game.team2}}</b><span class="pull-right">{{game.result}}</span>
+                        {% else %}
+                        {{game.team1}} - {{game.team2}}<span class="pull-right">{{game.result}}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="list-group-item">
+                    {{game.playtime}}
+                </li>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <!--end game block-->
+
+    {% if forloop.counter|divisibleby:group.break %}
+    </div>
+    <div class="row gameinfo-{{forloop.parentloop.counter}} collapse">
+    {% if group.offset %}
+    <div class="col-md-{{group.offset}}"></div>
+    {% endif%}
+    {% endif %}
+
+    {% endfor %}
+
+</div>
+{% endfor %}
+
+{% endblock %}

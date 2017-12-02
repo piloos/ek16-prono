@@ -1,0 +1,39 @@
+{% extends "bets/base.html" %}
+
+{% block content %}
+
+<h2>{{game.gametype}}</h2>
+<h1>{{game.name}}  <small>{{game.playtime}}</small></h1>
+<h1>{{game.result}}</h1>
+
+{% if game.bets_changeable %}
+<p>Je kan de pronostieken van de anderen pas zien vanaf 1 uur voor de wedstrijd.</p>
+<br>
+<p>De volgende spelers hebben al gepronostikeerd:</p>
+<ul>
+{% for bet in bets %}<li>{{bet.player.name}}</li>{% endfor %}
+</ul>
+{% else %}
+    <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Speler</th>
+            <th>Pronostiek</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bet in bets %}
+          <tr>
+            <td>{{forloop.counter}}</td>
+            <td><a href="{% url 'bets:player' bet.player.name %}">{{ bet.player.name }}</a></td>
+            <td>{{bet.betted_result}}</td>
+            <td>{{ bet.points }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+{% endblock %}

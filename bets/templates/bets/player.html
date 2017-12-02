@@ -1,0 +1,277 @@
+{% extends "bets/base.html" %}
+
+{% block content %}
+
+<script>
+$( document ).ready(function() {
+
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip({'trigger': 'manual', 'container': 'body'})
+    })
+
+    $('.btn-toggle').click(function() {
+        $(this).find('span').toggleClass('hidden');
+    });
+
+    $( ".betForm" ).submit(function( event ) {
+
+      // Stop form from submitting normally
+      event.preventDefault();
+
+      var form = $(this);
+
+      $.ajax({
+        type: "POST",
+        url: form.attr('action'),
+        data: form.serialize(),
+        dataType: "text",
+        success: function(response) {
+          var response =  $.parseJSON( response );
+          if(response.success) {
+            var game_id = form.find('input[name="game"]').val();
+            $('#betted-result-' + game_id).html('Pronostiek<span class="pull-right">' + response.new_bet + '</span>');
+            form.find('input[name="score"]').tooltip('hide');
+          }
+          else {
+            form.find('input[name="score"]').attr('data-original-title', response.error);
+            form.find('input[name="score"]').tooltip('show');
+          }
+          form.find('input[name="score"]').val("");
+          return true;
+        },
+        error: function(rs, e) {
+          alert(rs.responseText);
+          return false;
+        }
+      });
+
+    });
+
+    $( ".new-team-select" ).click(function( event ) {
+
+      // Stop form from submitting normally
+      event.preventDefault();
+
+      var selection = $(this);
+      var old_team_pk =  $('#' + selection.data("old-team-info") + '-pk').text();
+      var new_team_pk = selection.data("new-team");
+      var phase_bet_pk = selection.data("phase-bet");
+
+      $.ajax({
+        type: "POST",
+        url: "{% url 'bets:change_phase_bet' %}",
+        data: {'old-team': old_team_pk, 'new-team': new_team_pk,
+               'phase-bet': phase_bet_pk, 'player': "{{player.name}}",
+               'csrfmiddlewaretoken': '{{ csrf_token }}'},
+        dataType: "text",
+        success: function(response) {
+          var response =  $.parseJSON( response );
+          if(response.success) {
+            $('#' + selection.data("old-team-info") + '-name').text(response.new_team);
+            $('#' + selection.data("old-team-info") + '-pk').text(new_team_pk);
+            //remove the new team from other selections
+            $('.team-' + new_team_pk + '-' + phase_bet_pk).hide()
+            //add the old team to the selections
+            $('.team-' + old_team_pk + '-' + phase_bet_pk).show()
+            //change the classes of the empty selections
+            $('#' + selection.data("old-team-info") + '-paneltype').removeClass("panel-default");
+            $('#' + selection.data("old-team-info") + '-paneltype').addClass("panel-primary");
+            $('#' + selection.data("old-team-info") + '-panelpart').removeClass("panel-footer");
+            $('#' + selection.data("old-team-info") + '-panelpart').addClass("panel-heading");
+            return true;
+          }
+          else {
+            alert(response.error)
+            return false;
+          }
+        },
+        error: function(rs, e) {
+          alert(rs.responseText);
+          return false;
+        }
+      });
+
+    });
+
+});
+</script>
+
+{% if user.is_authenticated and user.player == player %}
+    <h1>Jouw pronostiek  <small>{{player.points}} punten</small></h1>
+{% else %}
+    <h1>Pronostiek van {{player.name}}  <small>{{player.points}} punten</small></h1>
+{% endif %}
+
+<ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#phase_bets" aria-controls="phase_bets" role="tab" data-toggle="tab">Pronostiek tornooifases</a></li>
+    <li role="presentation"><a href="#game_bets" aria-controls="game_bets" role="tab" data-toggle="tab">Pronostiek wedstrijden</a></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- phase bets -->
+<div role="tabpanel" class="tab-pane active" id="phase_bets">
+
+    {% for b in phase_bets %}
+    <h3 class="text-warning">{{b.phase_bet.phase.name}}  <small>{{b.phase_bet.points}} punten
+                <span class="pull-right">In te vullen voor {{b.phase_bet.phase.bets_allowed_until}}</span></small></h3>
+
+    <div class="row">
+        {% for team in b.teams %}
+            <div class="col-md-3 col-sm-4">
+                {% if team in b.phase_bet.phase.team_set.all %}
+                <div class="panel panel-success">
+                {% elif team.still_in_the_running == False %}
+                <div class="panel panel-danger">
+                {% elif team.name == "leeg" %}
+                <div class="panel panel-default" id="old-team-{{b.phase_bet.pk}}-{{forloop.counter}}-paneltype">
+                {% else %}
+                <div class="panel panel-primary">
+                {% endif %}
+
+                    {% if team.name == "leeg" %}
+                    <div class="panel-footer" id="old-team-{{b.phase_bet.pk}}-{{forloop.counter}}-panelpart">
+                    {% else %}
+                    <div class="panel-heading">
+                    {% endif %}
+                        <span id="old-team-{{b.phase_bet.pk}}-{{forloop.counter}}-name">{{team.name}}</span>
+                        <span id="old-team-{{b.phase_bet.pk}}-{{forloop.counter}}-pk" hidden>{{team.pk}}</span>
+
+                        {% if user.is_authenticated and user.player == player and b.phase_bet.bets_changeable == True %}
+                        <div class="dropdown pull-right">
+                            <a href="" class="dropdown-toggle" data-toggle="dropdown">wijzig <b class="caret"></b></a>
+                            <ul class="dropdown-menu" role="menu">
+                                {% for t in b.team_choices %}
+                                <li class="team-{{t.pk}}-{{b.phase_bet.pk}}"><a href="" class="new-team-select" data-new-team="{{t.pk}}"
+                                     data-phase-bet="{{b.phase_bet.pk}}" data-old-team-info="old-team-{{b.phase_bet.pk}}-{{forloop.parentloop.counter}}">{{t}}</a></li>
+                                {% endfor %}
+                                {% for t in b.teams_chosen %}
+                                <li class="team-{{t.pk}}-{{b.phase_bet.pk}}" hidden><a href="" class="new-team-select" data-new-team="{{t.pk}}"
+                                     data-phase-bet="{{b.phase_bet.pk}}" data-old-team-info="old-team-{{b.phase_bet.pk}}-{{forloop.parentloop.counter}}">{{t}}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- game bets -->
+<div role="tabpanel" class="tab-pane" id="game_bets">
+
+    {% for group in game_grid %}
+
+    <div class="row">
+
+        <div class="col-md-6 col-centered">
+            <h3 class="text-center text-warning">{{group.name}}
+                <button class="btn btn-link btn-toggle" data-toggle="collapse" data-target=".gameinfo-{{forloop.counter}}">
+                    <span>Toon wedstrijden &raquo</span><span class="hidden">&laquo Verberg wedstrijden</span>
+                </button>
+            </h3>
+        </div>
+
+    </div>
+
+    <div class="row gameinfo-{{forloop.counter}} collapse">
+
+        {% if group.offset %}
+        <div class="col-md-{{group.offset}}"></div>
+        {% endif%}
+
+        {% for game in group.games %}
+
+        <!--one game block-->
+        {% if game.game != None %}
+        <div class="col-md-3 col-sm-4 {% if group.centered%}col-centered{% endif %}">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <a href="{% url 'bets:game' game.game.game_id %}" class="nohyperlinkmarkup">
+                        <h4 class="panel-title">{{game.game.gametype}}<span class="pull-right">match {{game.game.game_id}}</span></h3>
+                    </a>
+                </div>
+                <div class="list-group">
+                    <li class="list-group-item clearfix">
+                        <a href="{% url 'bets:game' game.game.game_id %}" class="nohyperlinkmarkup">
+                            {% if game.game.winner == 1 %}
+                            <b>{{game.game.team1}}</b> - {{game.game.team2}}<span class="pull-right">{{game.game.result}}</span>
+                            {% elif game.game.winner == 2 %}
+                            {{game.game.team1}} - <b>{{game.game.team2}}</b><span class="pull-right">{{game.game.result}}</span>
+                            {% else %}
+                            {{game.game.team1}} - {{game.game.team2}}<span class="pull-right">{{game.game.result}}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="list-group-item clearfix">
+                        {{game.game.playtime}}
+                    </li>
+                    <li class="list-group-item clearfix">
+                        <span id="betted-result-{{game.game.game_id}}">
+                        {% if game.bet != None %}
+                            {% if not game.game.bets_changeable or user.is_authenticated and user.player == player %}
+                                Pronostiek<span class="pull-right">{{game.bet.betted_result}}</span>
+                            {% else %}
+                                Pronostiek niet zichtbaar voor jou
+                            {% endif %}
+                        {% else %}
+                            Nog geen pronostiek
+                        {% endif %}
+                        </span>
+                    </li>
+                    {% if user.is_authenticated and user.player == player and game.game.bets_changeable == True %}
+                    <li class="list-group-item clearfix">
+                        <form class="form-inline betForm" role="form" action="{% url 'bets:change_bet' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-warning">Pronostikeer!</button>
+                            <div class="form-group pull-right">
+                                <div class="input-group">
+                                    <label class="sr-only" for="score">score</label>
+                                    <input class="input-sm form-control" type="text" size="3" id="score" name="score"
+                                           data-toggle="tooltip" data-placement="bottom" title="you shouldnt see this">
+                                </div>
+                                <input type="hidden" name="player" value="{{ player.name }}"/>
+                                <input type="hidden" name="game" value="{{ game.game.game_id }}"/>
+                            </div>
+                        </form>
+                    </li>
+                    {% elif game.game.results_are_in == True %}
+                        {% if game.bet.points > 0 %}
+                            <li class="list-group-item list-group-item-success">
+                                {{game.bet.points}} punten!
+                            </li>
+                        {% else %}
+                            <li class="list-group-item list-group-item-danger">
+                                0 punten
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <!--end game block-->
+
+        {% if forloop.counter|divisibleby:group.break %}
+        </div>
+        <div class="row gameinfo-{{forloop.parentloop.counter}} collapse">
+        {% if group.offset %}
+        <div class="col-md-{{group.offset}}"></div>
+        {% endif%}
+        {% endif %}
+
+        {% endfor %}
+
+    </div>
+    {% endfor %}
+
+</div>
+</div>
+
+{% endblock %}

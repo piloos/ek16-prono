@@ -1,0 +1,19 @@
+{% extends "bets/base.html" %}
+
+{% block content %}
+
+{% for phase in phases %}
+<h3 class="text-warning">{{phase.name}}</h3>
+
+<div class="row">
+    {% for team in phase.team_set.all %}
+        <div class="col-md-3 col-sm-4">
+            <div class="panel panel-primary">
+                <div class="panel-heading">{{team}}</div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% endblock %}

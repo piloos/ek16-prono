@@ -1,0 +1,100 @@
+{% extends "bets/base.html" %}
+
+{% block content %}
+
+<script>
+$( document ).ready(function() {
+
+    $('.btn-toggle').click(function() {
+        $(this).find('span').toggleClass('hidden');
+    });
+
+});
+</script>
+
+<div class="jumbotron">
+    <h1>Legkip EK 2016
+    {% if not user.is_authenticated %}
+    <span class="pull-right"><a class="btn btn-primary" href="{% url 'bets:register' %}" role="button">Schrijf je in!</a></span>
+    {% endif %}
+    </h1>
+    <p>Welkom bij de Legkip EK 2016 pronostiek!</p>
+</div>
+
+<h3 class="text-warning">Spelconcept
+<button class="btn btn-link btn-toggle" data-toggle="collapse" data-target="#gameinfo">
+    <span>Toon details &raquo</span><span class="hidden">&laquo Verberg details</span>
+</button></h3>
+
+<div id="gameinfo" class="collapse">
+    <h4>Pronostiekeren op wedstrijden</h4>
+    <ul>
+        <li>Je kan pronostiekeren per wedstrijd tot <b>1 uur voor elke wedstrijd.</b></li>
+        <ul>
+            <li>3 punten als je de winnaar of gelijkspel voorspelt</li>
+            <li>7 punten als je daarenboven de correcte score voorspelt</li>
+        </ul>
+        <li><b>Enkel de score na 90 of 120 minuten telt.</b>  Als je een gelijkspel na 120 minuten voorspelt
+            moet je <b>vanaf de achtstefinales expliciet een winnaar aanduiden.</b></li>
+    </ul>
+    <h4>Pronostiekeren op tornooifases</h4>
+    <ul>
+        <li>Je kan tot <b>1 uur voor de aanvang van het tornooi</b> pronostiekeren wie de
+            achtstefinalisten en kwartfinalisten zullen zijn.</li>
+        <li>Je kan tot <b>1 uur voor de aanvang van de achtstefinales</b> voorspellen wie
+            de halvefinalisten, finalisten en de Europees kampioen zullen zijn.</li>
+        <li>Punten:</li>
+        <ul>
+            <li>5 punten per correcte achtstefinalist</li>
+            <li>7 punten per correcte kwartfinalist</li>
+            <li>10 punten per correcte halvefinalist</li>
+            <li>14 punten per correcte finalist</li>
+            <li>20 punten als je de Europees kampioen correct voorspelt</li>
+        </ul>
+    </ul>
+</div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <h3 class="text-warning">Top 5 spelers</h3>
+            <table class="table">
+                <tbody>
+                  {% for player in player_list %}
+                  <tr>
+                    <td>{{forloop.counter}}</td>
+                    <td><a href="{% url 'bets:player' player.name %}">{{ player.name }}</a></td>
+                    <td>{{ player.points }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-4">
+            <h3 class="text-warning">Komende wedstrijden</h3>
+            <table class="table">
+                <tbody>
+                  {% for game in next_games %}
+                  <tr>
+                    <td><a href="{% url 'bets:game' game.game_id %}">{{ game.name }}</a></td>
+                    <td>{{ game.playtime }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-4">
+            <h3 class="text-warning">Recent gespeelde wedstrijden</h3>
+            <table class="table">
+                <tbody>
+                  {% for game in prev_games %}
+                  <tr>
+                    <td><a href="{% url 'bets:game' game.game_id %}">{{ game.name }}</a></td>
+                    <td>{{ game.result }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
